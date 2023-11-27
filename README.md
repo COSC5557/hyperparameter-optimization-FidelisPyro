@@ -50,3 +50,10 @@ statistical tests to make this determination.
 
 Add your report and code to this repository. Bonus points if you can set up a
 Github action to automatically run the code and generate the report!
+  
+      
+rf: 0.640625  
+svc: 0.571875  
+nn: 0.58125  
+knn: 0.625  
+Best model: rf with test score: 0.596875
