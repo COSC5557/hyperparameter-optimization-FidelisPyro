@@ -36,7 +36,7 @@ y = df['quality']
 X_poly = poly.fit_transform(X)
 
 # Split the dataset into a training set and a temporary set into 60/40 split
-X_train, X_temp, y_train, y_temp = train_test_split(X_poly, y, test_size=0.4, random_state=42)
+X_train, X_temp, y_train, y_temp = train_test_split(X_poly, y, test_size=0.2, random_state=42)
 
 # Split the temporary set into validation and test set into 20/20 split of total dataset
 X_val, X_test, y_val, y_test = train_test_split(X_temp, y_temp, test_size=0.5, random_state=42)
@@ -48,8 +48,8 @@ print(f"X_test shape: {X_test.shape}, y_test shape: {y_test.shape}")
 # Define the pipelines
 pipelines = {
     'rf': Pipeline([('scaler', StandardScaler()), ('model', RandomForestClassifier())]),
-    'svc': Pipeline([('scaler', StandardScaler()), ('model', SVC(C = 0.5))]),
-    'nn': Pipeline([('scaler', StandardScaler()), ('model', MLPClassifier(hidden_layer_sizes=(10,), max_iter=10000, alpha=0.001))]),
+    'svc': Pipeline([('scaler', StandardScaler()), ('model', SVC())]),
+    'nn': Pipeline([('scaler', StandardScaler()), ('model', MLPClassifier(max_iter=100000))]),
     'knn': Pipeline([('scaler', StandardScaler()), ('model', KNeighborsClassifier())]),
 }
 
@@ -60,18 +60,27 @@ param_grids = {
         'model__max_depth': [5, 10, 20, 50],
         'model__min_samples_split': [2, 5, 10, 20],
         'model__min_samples_leaf': [1, 2, 4, 8],
+        'model__bootstrap': [True, False],
     },
     'svc': {
         'model__C': [0.01, 0.1, 0.5, 1, 10],
-        'model__kernel': ['linear', 'rbf', 'poly', 'sigmoid'],
+        'model__kernel': ['linear', 'rbf', 'poly', 'sigmoid',],
+        'model__coef0': [0.0, 0.1, 0.5, 1.0],
+        'model__shrinking': [True, False],
+        'model__class_weight': [None, 'balanced'],
+        'model__tol': [1e-3, 1e-4, 1e-5],
+        'model__decision_function_shape': ['ovr', 'ovo'],
     },
     'nn': {
-        'model__hidden_layer_sizes': [(10,), (50,), (100,), (200,)],
+        'model__hidden_layer_sizes': [(50,), (100,), (200,)],
+        'model__solver': ['lbfgs', 'sgd', 'adam'],
         'model__alpha': [0.0001, 0.001, 0.01, 0.1],
+        'model__learning_rate': ['constant', 'invscaling', 'adaptive'],
     },
     'knn': {
         'model__n_neighbors': [3, 5, 7, 10],
         'model__weights': ['uniform', 'distance'],
+        'model__algorithm': ['ball_tree', 'kd_tree', 'brute'],
         'model__p': [1, 2],
     },
 }
@@ -98,8 +107,8 @@ for model_name, pipeline in pipelines.items():
     sns.heatmap(confusion, annot=True, cmap="Blues", fmt="d")
     plt.xlabel("Actual Quality")
     plt.ylabel("Predicted Quality")
-    plt.title("Confusion Matrix " + model_name)
-    plt.savefig('Confusion_matrix_'+ model_name + '.png')
+    plt.title("Confusion Matrix " + model_name + "4")
+    plt.savefig('Confusion_matrix_'+ model_name + '4.png')
     plt.close()  
     
 for model_name, score in scores.items():
@@ -120,6 +129,6 @@ print(f"Best model: {best_name} with test score: {test_score}")
 sns.heatmap(best_confusion, annot=True, cmap="BuPu", fmt="d")
 plt.xlabel("Actual Quality")
 plt.ylabel("Predicted Quality")
-plt.title("Confusion Matrix Best")
-plt.savefig('Confusion_matrix_Best.png')
+plt.title("Confusion Matrix Best" + best_name + "4")
+plt.savefig('Confusion_matrix_Best' + best_name + '4.png')
 plt.close()  
