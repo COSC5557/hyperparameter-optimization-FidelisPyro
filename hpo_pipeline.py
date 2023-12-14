@@ -15,12 +15,21 @@ from sklearn.neural_network import MLPClassifier
 #from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import accuracy_score, confusion_matrix
 from sklearn.feature_selection import RFECV
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.compose import ColumnTransformer
 
 # Path to my csv file
 path = "/mnt/c/Users/kylel/Programming/School/PracticalML/wine+quality/winequality-red.csv"
 
 # Read csv file into a pandas dataframe
 df = pd.read_csv(path, delimiter = ";")
+
+"""
+# Check to see if there are any missing values
+missing_values = df.isnull().sum()
+print(missing_values)
+"""
+
 
 # Create a new dataframe without the quality column
 quality = 'quality'
@@ -59,21 +68,7 @@ pipelines = {
                      ('model', KNeighborsClassifier())]),
 }
 
-"""
-# Fit the pipeline to the training data
-pipelines.fit(X_train, y_train)
 
-selector = pipelines.named_steps['selector']
-
-# Plot the scores
-plt.figure()
-plt.xlabel("Number of features selected")
-plt.ylabel("Cross validation score")
-plt.plot(range(1, len(selector.cv_results_['mean_test_score']) + 1), selector.cv_results_['mean_test_score'])
-plt.title('Random Forest: number of features selected vs cross validation score')
-plt.savefig('pipeline_testing.png')
-plt.close()
-"""
 
 # Search for the best hyperparameters
 # Separate search spaces for each model. One model uses only it's one search space
@@ -85,8 +80,8 @@ param_grids = {
         'model__min_samples_leaf': [1, 2, 4, 8],
     },
     'svc': {
-        'model__C': [0.01, 0.1, 0.5],
-        'model__kernel': ['linear'],
+        'model__C': [0.001, 0.01, 0.1, 1, 10],
+        'model__kernel': ['linear', 'rbf', 'poly', 'sigmoid'],
         'model__gamma': ['scale', 'auto'],
     },
     'nn': {
@@ -121,22 +116,40 @@ for model_name, pipeline in pipelines.items():
     cv_results[model_name] = grid_search.cv_results_
     
     # Predict the validation set results
-    #y_pred = best_model.predict(X_val)
+    y_pred = best_model.predict(X_val)
     
     # Compute confusion matrix
-    #confusion = confusion_matrix(y_val, y_pred)
+    confusion = confusion_matrix(y_val, y_pred)
     
-    # Check if 'selector' step exists in the pipeline
-    # Store the number of features used by the best model
+    sns.heatmap(confusion, annot=True, cmap="Blues", fmt="d")
+    plt.xlabel("Actual Quality")
+    plt.ylabel("Predicted Quality")
+    plt.title("Confusion Matrix " + model_name + "4")
+    plt.savefig('Confusion_matrix_'+ model_name + '4.png')
+    plt.close()  
+    
     # Check if 'selector' step exists in the pipeline
     if 'selector' in best_model.named_steps:
         num_features[model_name] = best_model.named_steps['selector'].support_.sum()
     else:
         num_features[model_name] = X_train.shape[1]
-    
+        
+best_rf_model = fitted_models['rf']
+best_svc_model = fitted_models['svc']
+best_nn_model = fitted_models['nn']
+best_knn_model = fitted_models['knn']
+
+best_rf_score = scores['rf']
+best_svc_score = scores['svc']
+best_nn_score = scores['nn']
+best_knn_score = scores['knn']
+
+print(f"Best RF model accuracy: {best_rf_score}")
+print(f"Best SVC model accuracy: {best_svc_score}")
+print(f"Best NN model accuracy: {best_nn_score}")
+print(f"Best KNN model accuracy: {best_knn_score}")
 
 
-    
 for model_name, score in scores.items():
     print(f"{model_name}: {score}")
 
@@ -148,6 +161,60 @@ best_model = fitted_models[best_name]
 y_pred_best = best_model.predict(X_test)
 
 best_confusion = confusion_matrix(y_test, y_pred_best)
+
+def confustion_matrix_plot(model_name, confusion):
+    sns.heatmap(confusion, annot=True, cmap="Blues", fmt="d")
+    plt.xlabel("Actual Quality")
+    plt.ylabel("Predicted Quality")
+    plt.title("Confusion Matrix " + model_name)
+    plt.savefig(f'{model_name}_Confusion_matrix.png')
+    plt.close()
+
+def plot_cv(model_name, selector):
+    # Plot the scores
+    plt.figure()
+    plt.xlabel("Number of features selected")
+    plt.ylabel("Cross validation score")
+    plt.plot(range(1, len(selector.cv_results_['mean_test_score']) + 1), selector.cv_results_['mean_test_score'])
+    plt.title(f'{model_name.upper()}: number of features selected vs cross validation score')
+    plt.savefig(f'{model_name}_pipeline_testing.png')
+    plt.close()
+
+
+def plot_mean_test_score(model_name, results):
+    # Plot the scores
+    plt.figure()
+    plt.xlabel("Hyperparameter settings")
+    plt.ylabel("Mean test score")
+    plt.plot(range(1, len(results['mean_test_score']) + 1), results['mean_test_score'])
+    plt.title(f'{model_name.upper()}: mean test score vs hyperparameter settings')
+    plt.savefig(f'{model_name}_mean_test_score.png')
+    plt.close()
+    
+def plot_score_features(scores, num_features):
+    plt.figure()
+    for model_name in scores.keys():
+        plt.plot(num_features[model_name], scores[model_name], 'o', label = model_name)
+    plt.xlabel("Number of features selected")
+    plt.ylabel("Validation score")
+    plt.legend()
+    plt.grid(True)
+    plt.title('Model Performance based on Number of Features and Best Hyperparameters')
+    plt.savefig("Model_Performance.png")
+    plt.close()
+
+models_with_selection = ['rf', 'svc']
+
+for model_name, pipeline in pipelines.items():
+    if model_name in models_with_selection:
+
+        # Fit the pipeline to the training data
+        pipeline.fit(X_train, y_train)
+
+        selector = pipeline.named_steps['selector']
+
+        plot_cv(model_name, selector)
+
 
 
 # Best model evaluation on test set
@@ -163,25 +230,9 @@ plt.close()
 
 # Plot mean test score for each hyperparameter setting for each model
 for model_name, results in cv_results.items():
-    plt.figure(figsize=(10, 6))
-    plt.plot(range(len(results['params'])), results['mean_test_score'])
-    #plt.xticks(range(len(results['params'])), results['params'], rotation='vertical', fontsize=8)  
-    plt.xlabel('Hyperparameters')   
-    plt.ylabel('Mean Test Score')
-    #plt.subplots_adjust(bottom=0.8) 
-    plt.title(f'Mean Test Score for Different Hyperparameters ({model_name})')
-    #plt.tight_layout()
-    plt.savefig(f'Mean_Test_Score_{model_name}.png')
-    plt.close()
+    plot_mean_test_score(model_name, results)
+
+plot_score_features(scores, num_features)
 
 
-plt.figure()
-for model_name in scores.keys():
-    plt.plot(num_features[model_name], scores[model_name], 'o', label = model_name)
-plt.xlabel("Number of features selected")
-plt.ylabel("Validation score")
-plt.legend()
-plt.grid(True)
-plt.title('Model Performance based on Number of Features and Best Hyperparameters')
-plt.savefig("Model_Performance.png")
-plt.close()
+
