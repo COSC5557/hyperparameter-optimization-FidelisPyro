@@ -74,23 +74,33 @@ pipelines = {
 # Separate search spaces for each model. One model uses only it's one search space
 param_grids = {
     'rf': {
+        'num_transformers__imputer__strategy': ['mean', 'median', 'most_frequent'],
+        'num_transformers__scaler': [StandardScaler(), MinMaxScaler()],
+        #'selector__min_features_to_select': [1,2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
         'model__n_estimators': [50, 100],
         'model__max_depth': [5, 10, 20],
         'model__min_samples_split': [2, 5, 10],
-        'model__min_samples_leaf': [1, 2, 4, 8],
+        'model__min_samples_leaf': [1, 4, 8],
     },
     'svc': {
+        'num_transformers__imputer__strategy': ['mean', 'median', 'most_frequent'],
+        'num_transformers__scaler': [StandardScaler(), MinMaxScaler()],
+        #'selector__min_features_to_select': [1,2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
         'model__C': [0.001, 0.01, 0.1, 1, 10],
         'model__kernel': ['linear', 'rbf', 'poly', 'sigmoid'],
         'model__gamma': ['scale', 'auto'],
     },
     'nn': {
+        'num_transformers__imputer__strategy': ['mean', 'median', 'most_frequent', 'constant'],
+        'num_transformers__scaler': [StandardScaler(), MinMaxScaler()],
         'model__hidden_layer_sizes': [(50,), (100,)],
         'model__solver': ['lbfgs'],
         'model__alpha': [0.0001, 0.001, 0.01],
         'model__learning_rate': ['constant', 'invscaling', 'adaptive'],
     },
     'knn': {
+        'num_transformers__imputer__strategy': ['mean', 'median', 'most_frequent', 'constant'],
+        'num_transformers__scaler': [StandardScaler(), MinMaxScaler()],
         'model__n_neighbors': [3, 5],
         'model__weights': ['uniform', 'distance'],
         'model__algorithm': ['brute'],
@@ -124,8 +134,8 @@ for model_name, pipeline in pipelines.items():
     sns.heatmap(confusion, annot=True, cmap="Blues", fmt="d")
     plt.xlabel("Actual Quality")
     plt.ylabel("Predicted Quality")
-    plt.title("Confusion Matrix " + model_name + "4")
-    plt.savefig('Confusion_matrix_'+ model_name + '4.png')
+    plt.title(f"Confusion Matrix: {model_name}")
+    plt.savefig(f'Confusion_matrix_{model_name}.png')
     plt.close()  
     
     # Check if 'selector' step exists in the pipeline
@@ -154,7 +164,7 @@ for model_name, score in scores.items():
     print(f"{model_name}: {score}")
 
 # Select best model
-best_name, best_score = max(scores.items(), key=lambda x: x[1])
+best_name, best_score = max(cv_results.items(), key=lambda x: np.mean(x[1]['mean_test_score']))
 best_model = fitted_models[best_name]
 
 # Predict the test set results
